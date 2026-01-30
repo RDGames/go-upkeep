@@ -67,6 +67,6 @@ ssh -p 23234 user@your-server-ip
 
 ## Areas of improvement
 - Public https dashboard
-- More aletr types (email SMTP, )
+- More alert types (email SMTP, )
 - Push monitor
 - Optional postgress support
