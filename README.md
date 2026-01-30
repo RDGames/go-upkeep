@@ -24,7 +24,7 @@ You must whitelist your SSH Public Key. The server uses strict authentication an
 **On the server**, create the `authorized_keys` file in the data directory:
 ```bash
 # Paste public key into this file
-echo "ssh-ed25519 AAAAC3Nza..." > /mnt/docker-volumes/upkeep/data/authorized_keys
+echo "ssh-ed25519 AAAAC3Nza..." > /mnt/upkeep/data/authorized_keys
 ```
 
 ### 3. Docker Compose
@@ -40,10 +40,10 @@ services:
       - "23234:23234"
     volumes:
       # Data Volume: Stores the SQLite DB and authorized_keys file
-      - /mnt/docker-volumes/upkeep/data:/data
+      - /mnt/upkeep/data:/data
       
       # Identity Volume: Persists the server's Host Key so it doesn't change on restart
-      - /mnt/docker-volumes/upkeep/ssh_host_keys:/app/.ssh
+      - /mnt/upkeep/ssh_host_keys:/app/.ssh
 ```
 
 ### 4. Start the Service
