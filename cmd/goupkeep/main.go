@@ -9,11 +9,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	bm "github.com/charmbracelet/wish/bubbletea"
+	"github.com/mattn/go-isatty"
 )
 
 func main() {
@@ -29,9 +32,18 @@ func main() {
 	
 	startSSHServer(*bindPort, *keysPath)
 
-	p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error: %v\n", err)
+	if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+		p := tea.NewProgram(tui.InitialModel(), tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+		}
+	} else {
+		fmt.Println("Go-Upkeep running in HEADLESS mode (Background Service)")
+		
+		done := make(chan os.Signal, 1)
+		signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		<-done
+		fmt.Println("Shutting down...")
 	}
 }
 
