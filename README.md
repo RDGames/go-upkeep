@@ -6,9 +6,33 @@
 - **SSL Monitoring**: Tracks certificate expiry and warns before it happens.
 - **Alerting**: Supports Discord Webhooks for Down/Up/SSL events.
 
+## Local Development
+
+If you want to run the app without Docker:
+
+1.  **Prerequisites:** Install Go 1.25.
+2.  **Setup:**
+    The app requires an `authorized_keys` file in the project root to authenticate SSH connections.
+    ```bash
+    # Copy your public key to the project root
+    cat ~/.ssh/key.pub > authorized_keys
+    ```
+3.  **Run the App:**
+    ```bash
+    go mod tidy
+    go run cmd/goupkeep/main.go
+    ```
+    *The TUI will open immediately in terminal.*
+
+4.  **Test SSH Access:**
+    Open a second terminal window:
+    ```bash
+    ssh -p 23234 localhost
+    ```
+
 ## Production Deployment
 
-### 1. Prepare Host Directories
+1. Prepare Host Directories
 Create the directories on your host machine to persist the database and server identity.
 
 ```bash
@@ -16,7 +40,7 @@ sudo mkdir -p /mnt/upkeep/data
 sudo mkdir -p /mnt/upkeep/ssh_host_keys
 ```
 
-### 2. Configure Access
+2. Configure Access
 You must whitelist your SSH Public Key. The server uses strict authentication and will deny connections if this file is missing.
 
 **On your local machine** (where you will connect *from*), get your public key.
@@ -27,7 +51,7 @@ You must whitelist your SSH Public Key. The server uses strict authentication an
 echo "ssh-ed25519 AAAAC3Nza..." > /mnt/upkeep/data/authorized_keys
 ```
 
-### 3. Docker Compose
+3. Docker Compose
 Create a `docker-compose.yml` file:
 
 ```yaml
@@ -36,6 +60,8 @@ services:
     image: rdgames1000/go-upkeep:latest
     container_name: go-upkeep
     restart: unless-stopped
+    stdin_open: true
+    tty: true
     ports:
       - "23234:23234"
     volumes:
@@ -46,15 +72,31 @@ services:
       - /mnt/upkeep/ssh_host_keys:/app/.ssh
 ```
 
-### 4. Start the Service
+4. Start the Service
 ```bash
 docker compose up -d
 ```
 
-### 5. Connect
+## Accessing the Dashboard
+
+### Method A: SSH
+This creates a remote session.
 ```bash
 ssh -p 23234 user@your-server-ip
 ```
+
+### Method B: Docker Attach (Local Console)
+You can view the main process directly on the server console.
+
+1.  **Attach:**
+    ```bash
+    docker attach go-upkeep
+    ```
+2.  **Detach:**
+    To leave the console *without* stopping the container, use the standard Docker detach sequence:
+    **Press `Ctrl+P` followed by `Ctrl+Q`**.
+
+    *If you press `q` or `Ctrl+C` while attached, you will terminate the container process.*
 
 ## Usage
 
