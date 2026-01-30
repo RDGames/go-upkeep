@@ -112,3 +112,6 @@ You can view the main process directly on the server console.
 - More alert types (email SMTP, )
 - Push monitor
 - Optional postgress support
+
+## Bugs
+- docker logs is glichy and doesnt work since it tries to put current TUI there
