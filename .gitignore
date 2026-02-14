@@ -31,3 +31,5 @@ upkeep.db
 .ssh
 
 authorized_keys
+
+tmp

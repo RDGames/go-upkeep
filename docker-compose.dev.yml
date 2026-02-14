@@ -1,0 +1,36 @@
+services:
+  # The Application
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: upkeep-dev
+    ports:
+      - "23234:23234" # SSH Access
+      - "8080:8080"   # HTTP (Push Monitors + Status Page)
+    environment:
+      # --- Database Configuration (Postgres) ---
+      - UPKEEP_DB_TYPE=postgres
+      - UPKEEP_DB_DSN=postgres://devuser:devpass@postgres:5432/upkeep_dev?sslmode=disable
+      
+      # --- Web Server Configuration (Phase 4) ---
+      - UPKEEP_HTTP_PORT=8080
+      - UPKEEP_STATUS_ENABLED=true
+      - UPKEEP_STATUS_TITLE=Dev Infrastructure Status
+    depends_on:
+      - postgres
+    stdin_open: true # Required for 'docker attach' (Local Admin Console)
+    tty: true        # Required for TUI rendering
+
+  # The Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: upkeep-postgres
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: upkeep_dev
+    ports:
+      - "5432:5432" # Expose for external DB tools (DBeaver, etc.)
+    volumes:
+      - ./tmp/pgdata:/var/lib/postgresql/data

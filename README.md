@@ -1,58 +1,48 @@
 # Go-Upkeep
 
-## Features
-- **TUI Dashboard**: Terminal interface.
-- **SSH Access**: Connect via `ssh -p 23234 server-ip`.
-- **SSL Monitoring**: Tracks certificate expiry and warns before it happens.
-- **Alerting**: Supports Discord Webhooks for Down/Up/SSL events.
+![Go Version](https://img.shields.io/badge/go-1.23-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Docker](https://img.shields.io/docker/pulls/rdgames1000/go-upkeep)
 
-## Local Development
+**Go-Upkeep** is a self-hosted infrastructure monitor with a retro-futuristic TUI accessible via SSH. It supports High Availability, Push Monitoring, and Alerting.
 
-If you want to run the app without Docker:
+*   🌐 **Full Documentation:** [goupkeep.org/docs](https://goupkeep.org/docs)
+*   🐳 **Docker Hub:** [rdgames1000/go-upkeep](https://hub.docker.com/r/rdgames1000/go-upkeep)
 
-1.  **Prerequisites:** Install Go 1.25.
-2.  **Setup:**
-    The app requires an `authorized_keys` file in the project root to authenticate SSH connections.
-    ```bash
-    # Copy your public key to the project root
-    cat ~/.ssh/key.pub > authorized_keys
-    ```
-3.  **Run the App:**
-    ```bash
-    go mod tidy
-    go run cmd/goupkeep/main.go
-    ```
-    *The TUI will open immediately in terminal.*
+---
 
-4.  **Test SSH Access:**
-    Open a second terminal window:
-    ```bash
-    ssh -p 23234 localhost
-    ```
+## 🚀 Key Features
 
-## Production Deployment
+*   **SSH Dashboard**: Zero-install client. Manage monitors via `ssh -p 23234 your-server`.
+*   **Protocols**:
+    *   **HTTP/S**: Active polling with SSL certificate expiration tracking.
+    *   **PUSH**: Heartbeat endpoints for cron jobs/backup scripts.
+*   **High Availability**: Leader/Follower clustering with automatic failover.
+*   **Alerting**: Native support for Discord, Slack, Email (SMTP), and Webhooks.
+*   **Backends**: SQLite (default) or PostgreSQL (production).
 
-1. Prepare Host Directories
-Create the directories on your host machine to persist the database and server identity.
+---
 
+## 🛠️ Quick Start (Local Dev)
+
+**Option A: Native Go (Fastest)**
 ```bash
-sudo mkdir -p /mnt/upkeep/data
-sudo mkdir -p /mnt/upkeep/ssh_host_keys
+go mod tidy
+go run cmd/goupkeep/main.go
+# Connect: ssh -p 23234 localhost
 ```
 
-2. Configure Access
-You must whitelist your SSH Public Key. The server uses strict authentication and will deny connections if this file is missing.
-
-**On your local machine** (where you will connect *from*), get your public key.
-
-**On the server**, create the `authorized_keys` file in the data directory:
+**Option B: Docker Compose (Full Stack)**
 ```bash
-# Paste public key into this file
-echo "ssh-ed25519 AAAAC3Nza..." > /mnt/upkeep/data/authorized_keys
+docker compose -f docker-compose.dev.yml up --build
 ```
 
-3. Docker Compose
-Create a `docker-compose.yml` file:
+---
+
+## 📦 Production Deployment
+
+For critical infrastructure, we recommend Docker Compose.
+
+### 1. The Compose File
+Create `docker-compose.yml`:
 
 ```yaml
 services:
@@ -60,58 +50,40 @@ services:
     image: rdgames1000/go-upkeep:latest
     container_name: go-upkeep
     restart: unless-stopped
-    stdin_open: true
+    stdin_open: true # Required for initial setup console
     tty: true
     ports:
-      - "23234:23234"
+      - "23234:23234" # SSH
+      - "8080:8080"   # HTTP (Status Page & Push)
     volumes:
-      # Data Volume: Stores the SQLite DB and authorized_keys file
-      - /mnt/upkeep/data:/data
-      
-      # Identity Volume: Persists the server's Host Key so it doesn't change on restart
-      - /mnt/upkeep/ssh_host_keys:/app/.ssh
+      - ./data:/data
+      - ./ssh_keys:/app/.ssh
+    environment:
+      - UPKEEP_DB_TYPE=sqlite
+      - UPKEEP_DB_DSN=/data/upkeep.db
+      - UPKEEP_STATUS_ENABLED=true
+      - UPKEEP_CLUSTER_SECRET=ChangeMeToSomethingSecure
 ```
 
-4. Start the Service
+### 2. Initial Setup (Identity Management)
+**Important:** V2 stores SSH keys in the database. You must create the first user manually via the console.
+
+1.  Start the stack: `docker compose up -d`
+2.  Attach to the container: `docker attach go-upkeep`
+3.  Inside the TUI:
+    *   Press **[Tab]** to select the `Users` tab.
+    *   Press **[n]** to create a user.
+    *   Enter your username and paste your public key (`cat ~/.ssh/id_ed25519.pub`).
+    *   Press **[Enter]** to save.
+4.  Detach: Press **Ctrl+P** then **Ctrl+Q**.
+
+### 3. Usage
+Connect using your standard SSH client:
 ```bash
-docker compose up -d
+ssh -p 23234 your-server-ip
 ```
 
-## Accessing the Dashboard
+For advanced setups (Postgres, Clustering, Migration), please consult the [Official Documentation](https://goupkeep.org/docs).
 
-### Method A: SSH
-This creates a remote session.
-```bash
-ssh -p 23234 user@your-server-ip
-```
-
-### Method B: Docker Attach (Local Console)
-You can view the main process directly on the server console.
-
-1.  **Attach:**
-    ```bash
-    docker attach go-upkeep
-    ```
-2.  **Detach:**
-    To leave the console *without* stopping the container, use the standard Docker detach sequence:
-    **Press `Ctrl+P` followed by `Ctrl+Q`**.
-
-    *If you press `q` or `Ctrl+C` while attached, you will terminate the container process.*
-
-## Usage
-
-### Navigation
-- **n**: New Site / Alert
-- **d**: Delete
-- **e** or **Enter**: Edit
-- **Tab**: Switch between Sites, Alerts, and Logs tabs.
-- **PgUp/PgDn**: Scroll Logs or Forms.
-
-## Areas of improvement
-- Public https dashboard
-- More alert types (email SMTP, )
-- Push monitor
-- Optional postgress support
-
-## Bugs
-- docker logs is glichy and doesnt work since it tries to put current TUI there
+## 📄 License
+MIT License.

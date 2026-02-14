@@ -1,0 +1,72 @@
+services:
+  # -------------------------
+  # LEADER NODE
+  # -------------------------
+  leader:
+    build: .
+    container_name: upkeep-leader
+    ports:
+      - "23234:23234" # SSH
+      - "8080:8080"   # HTTP
+    environment:
+      - UPKEEP_DB_TYPE=postgres
+      # Note: Port 5432 is correct here because we are talking INSIDE the network
+      - UPKEEP_DB_DSN=postgres://devuser:devpass@leader-db:5432/upkeep_dev?sslmode=disable
+      - UPKEEP_HTTP_PORT=8080
+      - UPKEEP_STATUS_ENABLED=true
+      - UPKEEP_STATUS_TITLE=Leader Node
+      
+      # Cluster Config
+      - UPKEEP_CLUSTER_MODE=leader
+      - UPKEEP_CLUSTER_SECRET=mysecret
+    depends_on:
+      - leader-db
+    stdin_open: true
+    tty: true
+
+  leader-db:
+    image: postgres:15-alpine
+    container_name: upkeep-leader-db
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: upkeep_dev
+    volumes:
+      - ./tmp/leader-data:/var/lib/postgresql/data
+
+  # -------------------------
+  # FOLLOWER NODE
+  # -------------------------
+  follower:
+    build: .
+    container_name: upkeep-follower
+    ports:
+      - "23233:23234" # SSH (Mapped to different host port)
+      - "8081:8080"   # HTTP (Mapped to different host port)
+    environment:
+      - UPKEEP_DB_TYPE=postgres
+      # Connects to its OWN database
+      - UPKEEP_DB_DSN=postgres://devuser:devpass@follower-db:5432/upkeep_dev?sslmode=disable
+      - UPKEEP_HTTP_PORT=8080
+      - UPKEEP_STATUS_ENABLED=true
+      - UPKEEP_STATUS_TITLE=Follower Node
+      
+      # Cluster Config
+      - UPKEEP_CLUSTER_MODE=follower
+      - UPKEEP_CLUSTER_SECRET=mysecret
+      # IMPORTANT: Uses the Service Name "leader" to connect internally
+      - UPKEEP_PEER_URL=http://leader:8080
+    depends_on:
+      - follower-db
+    stdin_open: true
+    tty: true
+
+  follower-db:
+    image: postgres:15-alpine
+    container_name: upkeep-follower-db
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: upkeep_dev
+    volumes:
+      - ./tmp/follower-data:/var/lib/postgresql/data
